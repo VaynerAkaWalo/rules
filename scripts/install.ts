@@ -60,7 +60,7 @@ const render = async (template: string | undefined, instructions: string) => {
   const path = join(import.meta.dir, "templates", template)
   const text = await readFile(path, "utf8")
 
-  return text.replaceAll("{{instructions}}", instructions.trimEnd()) + "\n"
+  return `${text.replaceAll("{{instructions}}", instructions.trimEnd())}\n`
 }
 
 const install = async (source: string) => {
