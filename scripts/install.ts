@@ -7,6 +7,7 @@ type Target = {
   file: (directory: string) => Promise<string>
   homeEnv?: string
   homeFallback?: () => string | undefined
+  template?: string
 }
 
 const root = resolve(import.meta.dir, "..")
@@ -36,12 +37,8 @@ const targets: Target[] = [
   },
   {
     name: "cursor",
-    file: async (directory) => join(directory, "AGENTS.md"),
-    homeEnv: "CURSOR_CONFIG_DIR",
-    homeFallback: () => {
-      const xdg = process.env.XDG_CONFIG_HOME?.trim()
-      return xdg ? join(xdg, "cursor") : undefined
-    },
+    file: async (directory) => join(directory, "rules", "global.mdc"),
+    template: "cursor.mdc",
   },
   {
     name: "grok",
@@ -57,6 +54,15 @@ const home = (target: Target) => {
   return target.homeFallback?.() ?? join(homedir(), `.${target.name}`)
 }
 
+const render = async (template: string | undefined, instructions: string) => {
+  if (!template) return instructions
+
+  const path = join(import.meta.dir, "templates", template)
+  const text = await readFile(path, "utf8")
+
+  return `${text.replaceAll("{{instructions}}", instructions.trimEnd())}\n`
+}
+
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
 
@@ -65,7 +71,7 @@ const install = async (source: string) => {
     const path = await target.file(directory)
 
     await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, instructions)
+    await writeFile(path, await render(target.template, instructions))
 
     console.log(`${target.name}: ${await realpath(path)}`)
   }
