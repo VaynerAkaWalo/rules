@@ -7,6 +7,7 @@ type Target = {
   file: (directory: string) => Promise<string>
   homeEnv?: string
   homeFallback?: () => string | undefined
+  body?: (instructions: string) => string
 }
 
 const root = resolve(import.meta.dir, "..")
@@ -36,12 +37,11 @@ const targets: Target[] = [
   },
   {
     name: "cursor",
-    file: async (directory) => join(directory, "AGENTS.md"),
-    homeEnv: "CURSOR_CONFIG_DIR",
-    homeFallback: () => {
-      const xdg = process.env.XDG_CONFIG_HOME?.trim()
-      return xdg ? join(xdg, "cursor") : undefined
-    },
+    file: async (directory) => join(directory, "rules", "global.mdc"),
+    body: (instructions) =>
+      ["---", "description: User instructions", "alwaysApply: true", "---", "", instructions].join(
+        "\n",
+      ),
   },
   {
     name: "grok",
@@ -65,7 +65,7 @@ const install = async (source: string) => {
     const path = await target.file(directory)
 
     await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, instructions)
+    await writeFile(path, target.body?.(instructions) ?? instructions)
 
     console.log(`${target.name}: ${await realpath(path)}`)
   }
