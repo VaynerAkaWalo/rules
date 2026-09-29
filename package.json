@@ -1,0 +1,12 @@
+{
+  "name": "rules",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install-rules": "bun scripts/install.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "bun-types": "^1.4.2"
+  }
+}
