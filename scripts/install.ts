@@ -7,7 +7,7 @@ type Target = {
   file: (directory: string) => Promise<string>
   homeEnv?: string
   homeFallback?: () => string | undefined
-  body?: (instructions: string) => string
+  template?: string
 }
 
 const root = resolve(import.meta.dir, "..")
@@ -38,10 +38,7 @@ const targets: Target[] = [
   {
     name: "cursor",
     file: async (directory) => join(directory, "rules", "global.mdc"),
-    body: (instructions) =>
-      ["---", "description: User instructions", "alwaysApply: true", "---", "", instructions].join(
-        "\n",
-      ),
+    template: "cursor.mdc",
   },
   {
     name: "grok",
@@ -57,6 +54,15 @@ const home = (target: Target) => {
   return target.homeFallback?.() ?? join(homedir(), `.${target.name}`)
 }
 
+const render = async (template: string | undefined, instructions: string) => {
+  if (!template) return instructions
+
+  const path = join(import.meta.dir, "templates", template)
+  const text = await readFile(path, "utf8")
+
+  return text.replaceAll("{{instructions}}", instructions.trimEnd()) + "\n"
+}
+
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
 
@@ -65,7 +71,7 @@ const install = async (source: string) => {
     const path = await target.file(directory)
 
     await mkdir(dirname(path), { recursive: true })
-    await writeFile(path, target.body?.(instructions) ?? instructions)
+    await writeFile(path, await render(target.template, instructions))
 
     console.log(`${target.name}: ${await realpath(path)}`)
   }
