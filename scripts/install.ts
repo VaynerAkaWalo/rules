@@ -1,6 +1,7 @@
-import { access, mkdir, readFile, realpath, writeFile } from "node:fs/promises"
+import { access, copyFile, mkdir, readFile, realpath, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
+import { installMonitor } from "./install-monitor.ts"
 
 type Target = {
   name: string
@@ -38,6 +39,7 @@ const targets: Target[] = [
   {
     name: "cursor",
     file: async (directory) => join(directory, "rules", "global.mdc"),
+    homeEnv: "CURSOR_HOME",
     template: "cursor.mdc",
   },
   {
@@ -65,6 +67,7 @@ const render = async (template: string | undefined, instructions: string) => {
 
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
+  await installMonitor()
 
   for (const target of targets) {
     const directory = home(target)
@@ -73,7 +76,13 @@ const install = async (source: string) => {
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, await render(target.template, instructions))
 
+    const skill = join(directory, "skills", "monitor", "SKILL.md")
+
+    await mkdir(dirname(skill), { recursive: true })
+    await copyFile(join(root, "skills", "monitor", "SKILL.md"), skill)
+
     console.log(`${target.name}: ${await realpath(path)}`)
+    console.log(`${target.name} monitor: ${await realpath(skill)}`)
   }
 }
 
