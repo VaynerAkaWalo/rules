@@ -2,9 +2,10 @@ import { parseArgs as parseFlags } from "node:util"
 
 type Condition = "merged" | "checks-passed"
 type Status = "pending" | "ready" | "failed"
+type Platform = "GitHub" | "GitLab"
 
 export type Options = {
-  target?: "github-pr" | "gitlab-mr" | "gitlab-pipeline"
+  target: TargetName
   url: string
   until: Condition
   timeout: number
@@ -42,10 +43,26 @@ const pollingHelp = `
 Durations accept ms, s, m, or h. Stdout contains one terminal JSON result.
 Exit codes: 0 ready, 1 failed, 2 error, 124 timeout, 130 cancelled.`
 
-const targets = [
-  {
-    name: "github-pr",
+const resultHelp = `Result fields: status, reason, url, until, elapsedSeconds, and the last observed
+headSha when available. Authentication and invalid responses stop immediately.
+Transient failures get at most three consecutive attempts.`
+
+type Target = {
+  platform: Platform
+  description: string
+  conditions: Condition[]
+  hostname?: string
+  path: RegExp
+  help: string
+}
+
+const targets = {
+  "github-pr": {
+    platform: "GitHub",
     description: "Wait for a GitHub pull request to merge or its reported CI checks to pass",
+    conditions: ["merged", "checks-passed"],
+    hostname: "github.com",
+    path: /^\/[^/]+\/[^/]+\/pull\/[1-9]\d*\/?$/,
     help: `Usage: monitor github-pr <url> --until merged|checks-passed
 
 Requires an authenticated gh CLI. URLs must be https://github.com/owner/repo/pull/number.
@@ -60,41 +77,69 @@ Conditions:
 Checks passing does not guarantee every expected workflow has started or that
 branch protection permits merging. Recheck the head SHA before acting on a commit.
 
-Result fields: status, reason, url, until, elapsedSeconds, and the last observed
-headSha when available. Authentication and invalid responses stop immediately.
-Transient failures get at most three consecutive attempts.
+${resultHelp}
 ${pollingHelp}
 
 Examples:
   monitor github-pr https://github.com/owner/repo/pull/123 --until merged --timeout 30m
   monitor github-pr https://github.com/owner/repo/pull/123 --until checks-passed --timeout 15m`,
   },
-  ...(["gitlab-mr", "gitlab-pipeline"] as const).map((name) => ({
-    name,
-    description:
-      name === "gitlab-mr"
-        ? "Wait for a GitLab merge request to merge or its current-head pipeline to pass"
-        : "Wait for a GitLab pipeline to pass",
-    help: `Usage: monitor ${name} <url> --until ${name === "gitlab-mr" ? "merged|checks-passed" : "checks-passed"}
+  "gitlab-mr": {
+    platform: "GitLab",
+    description: "Wait for a GitLab merge request to merge or its current-head pipeline to pass",
+    conditions: ["merged", "checks-passed"],
+    path: /^\/[^/]+(?:\/[^/]+)+\/-\/merge_requests\/[1-9]\d*\/?$/,
+    help: `Usage: monitor gitlab-mr <url> --until merged|checks-passed
 
-Requires an authenticated glab CLI for the URL's host, including self-hosted GitLab.
-URLs must use HTTPS and end in /-/merge_requests/number or /-/pipelines/number
-for the corresponding target. Nested project groups are supported.
+Requires a glab CLI authenticated for the URL's host, including self-hosted GitLab.
+URLs must be https://host/group/project/-/merge_requests/number. Nested groups work.
 
-merged waits for the merge request to merge. Closed, unmerged requests fail.
-checks-passed waits for pipeline success or skipped status. Failed and cancelled
-pipelines fail. Manual and blocked pipelines remain pending.
-Merge request checks follow head_pipeline and require its SHA to match the
-current request head. Missing or outdated pipelines remain pending.
-Passing checks does not guarantee mergeability or that every expected job ran.
-Recheck headSha before acting on a commit.
+Conditions:
+  merged         Ready when the MR merges. A closed, unmerged MR fails.
+  checks-passed  Follows the MR head pipeline and requires it to run on the current
+                 head, directly or through a merged results or merge train commit.
+                 Successful and skipped pipelines pass. Missing, outdated, manual,
+                 and scheduled pipelines remain pending. A failed, canceling, or
+                 canceled pipeline, or a closed, unmerged MR, fails.
 
-Result fields: status, reason, url, until, elapsedSeconds, and headSha when available.
-Authentication and invalid responses stop immediately. Transient failures get
-at most three consecutive attempts.
-${pollingHelp}`,
-  })),
-]
+Checks passing does not guarantee mergeability or that every expected job ran.
+Recheck the head SHA before acting on a commit.
+
+${resultHelp}
+${pollingHelp}
+
+Examples:
+  monitor gitlab-mr https://gitlab.com/group/project/-/merge_requests/123 --until merged
+  monitor gitlab-mr https://gitlab.example.com/group/sub/project/-/merge_requests/123 \\
+    --until checks-passed --timeout 15m`,
+  },
+  "gitlab-pipeline": {
+    platform: "GitLab",
+    description: "Wait for a GitLab pipeline to pass",
+    conditions: ["checks-passed"],
+    path: /^\/[^/]+(?:\/[^/]+)+\/-\/pipelines\/[1-9]\d*\/?$/,
+    help: `Usage: monitor gitlab-pipeline <url> --until checks-passed
+
+Requires a glab CLI authenticated for the URL's host, including self-hosted GitLab.
+URLs must be https://host/group/project/-/pipelines/number. Nested groups work.
+
+Conditions:
+  checks-passed  Successful and skipped pipelines pass. Manual and scheduled
+                 pipelines remain pending. Failed, canceling, and canceled
+                 pipelines fail. headSha is the commit the pipeline ran on.
+
+${resultHelp}
+${pollingHelp}
+
+Examples:
+  monitor gitlab-pipeline https://gitlab.com/group/project/-/pipelines/456 --until checks-passed`,
+  },
+} satisfies Record<string, Target>
+
+type TargetName = keyof typeof targets
+
+const isTarget = (name: string | undefined): name is TargetName =>
+  name !== undefined && Object.hasOwn(targets, name)
 
 const usage = `Usage: monitor <target> [options]
        monitor targets
@@ -109,12 +154,7 @@ const duration = (value: string) => {
   const match = /^(\d+(?:\.\d+)?)(ms|s|m|h)$/.exec(value)
   if (!match) throw new Error(`Invalid duration: ${value}`)
 
-  const units: Record<string, number> = {
-    ms: 1,
-    s: 1_000,
-    m: 60_000,
-    h: 3_600_000,
-  }
+  const units: Record<string, number> = { ms: 1, s: 1_000, m: 60_000, h: 3_600_000 }
   const milliseconds = Number(match[1]) * units[match[2]]
   if (milliseconds < 1 || milliseconds > 2_147_483_647) {
     throw new Error("Durations must be between 1ms and 2147483647ms")
@@ -135,39 +175,35 @@ export const parseArgs = (args: string[]): Options => {
     },
   })
 
-  if (positionals.length !== 2 || !targets.some(({ name }) => name === positionals[0])) {
+  const [name, address] = positionals
+  if (positionals.length !== 2 || !isTarget(name)) {
     throw new Error("Expected a supported target followed by its URL")
   }
   if (values.until !== "merged" && values.until !== "checks-passed") {
     throw new Error("--until must be merged or checks-passed")
   }
 
-  const target = positionals[0] as NonNullable<Options["target"]>
-  if (target === "gitlab-pipeline" && values.until !== "checks-passed") {
-    throw new Error("gitlab-pipeline requires --until checks-passed")
+  const target: Target = targets[name]
+  if (!target.conditions.includes(values.until)) {
+    throw new Error(`${name} requires --until ${target.conditions.join(" or ")}`)
   }
 
-  const url = new URL(positionals[1])
-  const validPath =
-    target === "github-pr"
-      ? url.hostname === "github.com" && /^\/[^/]+\/[^/]+\/pull\/[1-9]\d*\/?$/.test(url.pathname)
-      : new RegExp(
-          `^/[^/]+(?:/[^/]+)+/-/${target === "gitlab-mr" ? "merge_requests" : "pipelines"}/[1-9]\\d*/?$`,
-        ).test(url.pathname)
+  const url = new URL(address)
   if (
     url.protocol !== "https:" ||
+    (target.hostname && url.hostname !== target.hostname) ||
     url.port ||
     url.username ||
     url.password ||
-    !validPath ||
+    !target.path.test(url.pathname) ||
     url.search ||
     url.hash
   ) {
-    throw new Error("Expected a valid HTTPS URL for the selected target")
+    throw new Error(`Expected a ${name} URL as described by monitor ${name} --help`)
   }
 
   return {
-    ...(target === "github-pr" ? {} : { target }),
+    target: name,
     url: url.href.replace(/\/$/, ""),
     until: values.until,
     timeout: duration(values.timeout ?? "30m"),
@@ -176,9 +212,9 @@ export const parseArgs = (args: string[]): Options => {
   }
 }
 
-const record = (value: unknown, host = "GitHub"): Record<string, unknown> => {
+const record = (value: unknown, platform: Platform = "GitHub"): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new CheckError(`Invalid ${host} response`)
+    throw new CheckError(`Invalid ${platform} response`)
   }
 
   return value as Record<string, unknown>
@@ -240,20 +276,12 @@ export const evaluatePullRequest = (value: unknown, until: Condition): Snapshot 
 
   const headSha = pr.headRefOid
   if (pr.state === "CLOSED") {
-    return {
-      status: "failed",
-      reason: "Pull request closed without merging",
-      headSha,
-    }
+    return { status: "failed", reason: "Pull request closed without merging", headSha }
   }
   if (until === "merged") {
     return pr.state === "MERGED"
       ? { status: "ready", reason: "Pull request merged", headSha }
-      : {
-          status: "pending",
-          reason: "Waiting for pull request to merge",
-          headSha,
-        }
+      : { status: "pending", reason: "Waiting for pull request to merge", headSha }
   }
 
   if (!Array.isArray(pr.statusCheckRollup)) {
@@ -291,42 +319,47 @@ export const evaluatePullRequest = (value: unknown, until: Condition): Snapshot 
       }
 }
 
+const pipelineStatuses = new Map<unknown, Status>([
+  ["success", "ready"],
+  ["skipped", "ready"],
+  ["failed", "failed"],
+  ["canceling", "failed"],
+  ["canceled", "failed"],
+  ["created", "pending"],
+  ["waiting_for_resource", "pending"],
+  ["waiting_for_callback", "pending"],
+  ["preparing", "pending"],
+  ["pending", "pending"],
+  ["running", "pending"],
+  ["manual", "pending"],
+  ["scheduled", "pending"],
+  ["blocked", "pending"],
+])
+
 export const evaluatePipeline = (value: unknown): Snapshot => {
   const pipeline = record(value, "GitLab")
   if (typeof pipeline.sha !== "string" || !pipeline.sha) {
     throw new CheckError("Invalid GitLab pipeline SHA")
   }
 
-  const headSha = pipeline.sha
-  if (["success", "skipped"].includes(String(pipeline.status))) {
-    return { status: "ready", reason: `Pipeline ${pipeline.status}`, headSha }
-  }
-  if (["failed", "canceled"].includes(String(pipeline.status))) {
-    return { status: "failed", reason: `Pipeline ${pipeline.status}`, headSha }
-  }
-  if (
-    [
-      "created",
-      "waiting_for_resource",
-      "preparing",
-      "pending",
-      "running",
-      "manual",
-      "scheduled",
-      "blocked",
-    ].includes(String(pipeline.status))
-  ) {
-    return {
-      status: "pending",
-      reason: `Waiting for pipeline: ${pipeline.status}`,
-      headSha,
-    }
-  }
+  const status = pipelineStatuses.get(pipeline.status)
+  if (!status) throw new CheckError(`Unknown GitLab pipeline status: ${String(pipeline.status)}`)
 
-  throw new CheckError(`Unknown GitLab pipeline status: ${String(pipeline.status)}`)
+  return {
+    status,
+    reason:
+      status === "pending"
+        ? `Waiting for pipeline: ${pipeline.status}`
+        : `Pipeline ${pipeline.status}`,
+    headSha: pipeline.sha,
+  }
 }
 
-export const evaluateMergeRequest = (value: unknown, until: Condition): Snapshot => {
+export const evaluateMergeRequest = (
+  value: unknown,
+  until: Condition,
+  pipelineParents: string[] = [],
+): Snapshot => {
   const mr = record(value, "GitLab")
   if (
     !["opened", "closed", "merged", "locked"].includes(String(mr.state)) ||
@@ -338,62 +371,59 @@ export const evaluateMergeRequest = (value: unknown, until: Condition): Snapshot
 
   const headSha = mr.sha
   if (mr.state === "closed") {
-    return {
-      status: "failed",
-      reason: "Merge request closed without merging",
-      headSha,
-    }
+    return { status: "failed", reason: "Merge request closed without merging", headSha }
   }
   if (until === "merged") {
     return mr.state === "merged"
       ? { status: "ready", reason: "Merge request merged", headSha }
-      : {
-          status: "pending",
-          reason: "Waiting for merge request to merge",
-          headSha,
-        }
+      : { status: "pending", reason: "Waiting for merge request to merge", headSha }
   }
 
-  if (mr.head_pipeline === null) {
-    return {
-      status: "pending",
-      reason: "Waiting for a pipeline on the current head",
-      headSha,
-    }
+  const waiting: Snapshot = {
+    status: "pending",
+    reason: "Waiting for a pipeline on the current head",
+    headSha,
   }
+  if (mr.head_pipeline === null) return waiting
 
   const pipeline = evaluatePipeline(mr.head_pipeline)
-  return pipeline.headSha === headSha
-    ? pipeline
-    : {
-        status: "pending",
-        reason: "Waiting for a pipeline on the current head",
-        headSha,
-      }
+  const current = pipeline.headSha === headSha || pipelineParents.includes(headSha)
+  return current ? { ...pipeline, headSha } : waiting
 }
 
-const checkTarget = async (options: Options, signal: AbortSignal): Promise<Snapshot> => {
-  const gitlab = options.target === "gitlab-mr" || options.target === "gitlab-pipeline"
-  const cli = gitlab ? "glab" : "gh"
-  const host = gitlab ? "GitLab" : "GitHub"
-  const fields = ["state", "headRefOid"]
-  if (options.until === "checks-passed") fields.push("statusCheckRollup")
+const mergeRequestRef = /^refs\/merge-requests\/\d+\/(?:merge|train)$/
 
-  const url = new URL(options.url)
-  const [project, resource] = url.pathname.slice(1).split("/-/")
-  const command = gitlab
-    ? [
-        cli,
-        "api",
-        `projects/${encodeURIComponent(project)}/${resource}`,
-        "--hostname",
-        url.hostname,
-      ]
-    : [cli, "pr", "view", options.url, "--json", fields.join(",")]
+const mergedResultCommit = (value: unknown): string | undefined => {
+  const mr = record(value, "GitLab")
+  if (!mr.head_pipeline || typeof mr.head_pipeline !== "object") return undefined
+
+  const { ref, sha } = mr.head_pipeline as Record<string, unknown>
+  if (typeof ref !== "string" || !mergeRequestRef.test(ref)) return undefined
+
+  return typeof sha === "string" && /^[0-9a-f]+$/.test(sha) && sha !== mr.sha ? sha : undefined
+}
+
+const commitParents = (value: unknown): string[] => {
+  const { parent_ids } = record(value, "GitLab")
+  if (!Array.isArray(parent_ids) || !parent_ids.every((id) => typeof id === "string")) {
+    throw new CheckError("Invalid GitLab commit response")
+  }
+
+  return parent_ids
+}
+
+const clis: Record<Platform, string> = { GitHub: "gh", GitLab: "glab" }
+
+const request = async (
+  platform: Platform,
+  args: string[],
+  signal: AbortSignal,
+): Promise<unknown> => {
+  const cli = clis[platform]
 
   let process: Bun.Subprocess<"ignore", "pipe", "pipe">
   try {
-    process = Bun.spawn(command, {
+    process = Bun.spawn([cli, ...args], {
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
@@ -421,7 +451,7 @@ const checkTarget = async (options: Options, signal: AbortSignal): Promise<Snaps
       process.exited,
     ])
 
-    if (signal.aborted) throw new CheckError(`${host} check timed out`, true)
+    if (signal.aborted) throw new CheckError(`${platform} check timed out`, true)
     if (exitCode !== 0) {
       const reason = stderr.trim() || `${cli} exited with code ${exitCode}`
       const retryable =
@@ -431,19 +461,60 @@ const checkTarget = async (options: Options, signal: AbortSignal): Promise<Snaps
       throw new CheckError(reason, retryable)
     }
 
-    let value: unknown
     try {
-      value = JSON.parse(stdout)
+      return JSON.parse(stdout)
     } catch {
       throw new CheckError(`${cli} returned invalid JSON`)
     }
-
-    if (options.target === "gitlab-mr") return evaluateMergeRequest(value, options.until)
-    if (options.target === "gitlab-pipeline") return evaluatePipeline(value)
-    return evaluatePullRequest(value, options.until)
   } finally {
     signal.removeEventListener("abort", cancel)
   }
+}
+
+type Check = (options: Options, signal: AbortSignal) => Promise<Snapshot>
+
+const checkGitHubPullRequest: Check = async (options, signal) => {
+  const fields = ["state", "headRefOid"]
+  if (options.until === "checks-passed") fields.push("statusCheckRollup")
+
+  const args = ["pr", "view", options.url, "--json", fields.join(",")]
+  return evaluatePullRequest(await request("GitHub", args, signal), options.until)
+}
+
+const gitlabApi = (options: Options) => {
+  const url = new URL(options.url)
+  const [project, resource] = url.pathname.slice(1).split("/-/")
+  const get = (path: string, signal: AbortSignal) =>
+    request(
+      "GitLab",
+      ["api", `projects/${encodeURIComponent(project)}/${path}`, "--hostname", url.hostname],
+      signal,
+    )
+
+  return { resource, get }
+}
+
+const checkGitLabMergeRequest: Check = async (options, signal) => {
+  const gitlab = gitlabApi(options)
+  const mr = await gitlab.get(gitlab.resource, signal)
+
+  const mergeCommit = options.until === "checks-passed" ? mergedResultCommit(mr) : undefined
+  const parents = mergeCommit
+    ? commitParents(await gitlab.get(`repository/commits/${mergeCommit}`, signal))
+    : []
+
+  return evaluateMergeRequest(mr, options.until, parents)
+}
+
+const checkGitLabPipeline: Check = async (options, signal) => {
+  const gitlab = gitlabApi(options)
+  return evaluatePipeline(await gitlab.get(gitlab.resource, signal))
+}
+
+const checks: Record<TargetName, Check> = {
+  "github-pr": checkGitHubPullRequest,
+  "gitlab-mr": checkGitLabMergeRequest,
+  "gitlab-pipeline": checkGitLabPipeline,
 }
 
 const sleep = async (milliseconds: number, signal: AbortSignal) => {
@@ -464,11 +535,11 @@ export const monitor = async (
   options: Options,
   {
     signal = new AbortController().signal,
-    check = checkTarget,
+    check = (options, signal) => checks[options.target](options, signal),
     report = (message: string) => console.error(message),
   }: {
     signal?: AbortSignal
-    check?: (options: Options, signal: AbortSignal) => Promise<Snapshot>
+    check?: Check
     report?: (message: string) => void
   } = {},
 ): Promise<Result> => {
@@ -518,9 +589,7 @@ export const monitor = async (
           return finish("error", reason)
         }
 
-        progress(
-          `Retrying ${options.target?.startsWith("gitlab-") ? "GitLab" : "GitHub"} check (${errors}/3): ${reason}`,
-        )
+        progress(`Retrying ${targets[options.target].platform} check (${errors}/3): ${reason}`)
       } finally {
         clearTimeout(checkTimer)
       }
@@ -543,13 +612,17 @@ export const main = async (args: string[]): Promise<number> => {
   }
 
   if (args.length === 1 && args[0] === "targets") {
-    console.log(JSON.stringify(targets.map(({ name, description }) => ({ name, description }))))
+    console.log(
+      JSON.stringify(
+        Object.entries(targets).map(([name, { description }]) => ({ name, description })),
+      ),
+    )
     return 0
   }
 
-  const target = targets.find(({ name }) => name === args[0])
-  if (target && args.length === 2 && (args[1] === "--help" || args[1] === "-h")) {
-    console.log(target.help)
+  const [name, flag] = args
+  if (isTarget(name) && args.length === 2 && (flag === "--help" || flag === "-h")) {
+    console.log(targets[name].help)
     return 0
   }
 
@@ -576,13 +649,7 @@ export const main = async (args: string[]): Promise<number> => {
     const result = await monitor(options, { signal: controller.signal })
     console.log(JSON.stringify(result))
 
-    const codes = {
-      ready: 0,
-      failed: 1,
-      error: 2,
-      timeout: 124,
-      cancelled: 130,
-    }
+    const codes = { ready: 0, failed: 1, error: 2, timeout: 124, cancelled: 130 }
     return codes[result.status]
   } finally {
     process.off("SIGINT", cancel)
