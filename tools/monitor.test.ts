@@ -30,7 +30,12 @@ const check = (name: string, conclusion: string, status = "COMPLETED") => ({
 
 type Response = { value?: unknown; stdout?: string; stderr?: string; code?: number; delay?: number }
 
-const start = async (responses: Response[], args: string[] = [], until = "merged") => {
+const start = async (
+  responses: Response[],
+  args: string[] = [],
+  until = "merged",
+  command?: string[],
+) => {
   const directory = await mkdtemp(join(tmpdir(), "rules-monitor-"))
   directories.push(directory)
 
@@ -58,15 +63,17 @@ process.exitCode = response.code ?? 0
     [
       bun,
       resolve(import.meta.dir, "monitor.ts"),
-      "github-pr",
-      url,
-      "--until",
-      until,
-      "--interval",
-      "1ms",
-      "--timeout",
-      "3s",
-      ...args,
+      ...(command ?? [
+        "github-pr",
+        url,
+        "--until",
+        until,
+        "--interval",
+        "1ms",
+        "--timeout",
+        "3s",
+        ...args,
+      ]),
     ],
     {
       env: { ...Bun.env, PATH: `${directory}:${Bun.env.PATH}`, MONITOR_FIXTURE: directory },
@@ -168,6 +175,41 @@ describe("GitHub conditions", () => {
 })
 
 describe("monitor CLI", () => {
+  test("discovers integrations without invoking gh", async () => {
+    const run = await start([], [], "merged", ["integrations"])
+    const { code, result } = await run.done()
+
+    expect(code).toBe(0)
+    expect(result).toEqual([{ name: "github-pr", description: expect.any(String) }])
+    expect(await Bun.file(join(run.directory, "counter")).exists()).toBe(false)
+  })
+
+  test.each(["--help", "-h"])(
+    "integration %s works without a URL or authentication",
+    async (flag) => {
+      const run = await start([], [], "merged", ["github-pr", flag])
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(run.process.stdout).text(),
+        new Response(run.process.stderr).text(),
+        run.process.exited,
+      ])
+
+      expect(code).toBe(0)
+      expect(stdout).toContain("--until merged|checks-passed")
+      expect(stdout).toContain("headSha")
+      expect(stderr).toBe("")
+      expect(await Bun.file(join(run.directory, "counter")).exists()).toBe(false)
+    },
+  )
+
+  test("unknown integration help returns an error", async () => {
+    const run = await start([], [], "merged", ["unknown", "--help"])
+    const { code, result } = await run.done()
+    expect(code).toBe(2)
+    expect(result.status).toBe("error")
+    expect(await Bun.file(join(run.directory, "counter")).exists()).toBe(false)
+  })
+
   test("polls until merge with one terminal JSON result", async () => {
     const run = await start([{ value: pr() }, { value: pr() }, { value: pr("MERGED") }])
     const { code, result, stderr } = await run.done()
@@ -303,14 +345,19 @@ test("installer deploys monitor skills and preserves the Codex override selectio
   await mkdir(homes.codex, { recursive: true })
   await writeFile(join(homes.codex, "AGENTS.override.md"), "old instructions")
 
+  const bin = join(directory, "bin with spaces")
+  const env = {
+    ...Bun.env,
+    CLAUDE_CONFIG_DIR: homes.claude,
+    CODEX_HOME: homes.codex,
+    CURSOR_HOME: homes.cursor,
+    GROK_HOME: homes.grok,
+    MONITOR_BIN_DIR: bin,
+    PATH: `${bin}:${Bun.env.PATH}`,
+  }
+
   const process = Bun.spawn([bun, resolve(import.meta.dir, "../scripts/install.ts")], {
-    env: {
-      ...Bun.env,
-      CLAUDE_CONFIG_DIR: homes.claude,
-      CODEX_HOME: homes.codex,
-      CURSOR_HOME: homes.cursor,
-      GROK_HOME: homes.grok,
-    },
+    env,
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -321,9 +368,26 @@ test("installer deploys monitor skills and preserves the Codex override selectio
   for (const name of ["claude", "codex", "cursor", "grok"]) {
     const home = homes[name]
     expect(await Bun.file(join(home, "skills/monitor/SKILL.md")).exists()).toBe(true)
-    const installed = Bun.spawn([bun, join(home, "tools/monitor.ts"), "--help"], { stdout: "pipe" })
-    expect(await new Response(installed.stdout).text()).toContain("checks-passed")
-    expect(await installed.exited).toBe(0)
+  }
+
+  const installed = Bun.spawn(["monitor", "integrations"], {
+    env,
+    cwd: tmpdir(),
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(installed.stdout).text(),
+    new Response(installed.stderr).text(),
+    installed.exited,
+  ])
+  expect(code).toBe(0)
+  expect(stderr).toBe("")
+
+  for (const { name } of JSON.parse(stdout)) {
+    const help = Bun.spawn(["monitor", name, "--help"], { env, cwd: tmpdir(), stdout: "pipe" })
+    expect(await new Response(help.stdout).text()).toContain("--until merged|checks-passed")
+    expect(await help.exited).toBe(0)
   }
 
   expect(await Bun.file(join(homes.codex, "AGENTS.md")).exists()).toBe(false)

@@ -33,13 +33,51 @@ export class CheckError extends Error {
   }
 }
 
-const usage = `Usage: bun tools/monitor.ts github-pr <url> --until merged|checks-passed
+const pollingHelp = `
   --timeout <duration>        Overall deadline (default: 30m)
   --interval <duration>       Poll interval (default: 30s)
   --check-timeout <duration>  Per-check deadline (default: 20s)
 
 Durations accept ms, s, m, or h. Stdout contains one terminal JSON result.
 Exit codes: 0 ready, 1 failed, 2 error, 124 timeout, 130 cancelled.`
+
+const integrations = [
+  {
+    name: "github-pr",
+    description: "Wait for a GitHub pull request to merge or its reported CI checks to pass",
+    help: `Usage: monitor github-pr <url> --until merged|checks-passed
+
+Requires an authenticated gh CLI. URLs must be https://github.com/owner/repo/pull/number.
+
+Conditions:
+  merged         Ready when the PR merges. A closed, unmerged PR fails.
+  checks-passed  Follows the current PR head and evaluates all reported checks,
+                 including legacy commit statuses. Neutral and skipped checks
+                 count as successful. No reported checks remains pending.
+                 A failed or cancelled check, or a closed, unmerged PR, fails.
+
+Checks passing does not guarantee every expected workflow has started or that
+branch protection permits merging. Recheck the head SHA before acting on a commit.
+
+Result fields: status, reason, url, until, elapsedSeconds, and the last observed
+headSha when available. Authentication and invalid responses stop immediately.
+Transient failures get at most three consecutive attempts.
+${pollingHelp}
+
+Examples:
+  monitor github-pr https://github.com/owner/repo/pull/123 --until merged --timeout 30m
+  monitor github-pr https://github.com/owner/repo/pull/123 --until checks-passed --timeout 15m`,
+  },
+]
+
+const usage = `Usage: monitor <integration> [options]
+       monitor integrations
+       monitor <integration> --help
+
+Wait for an external condition, then return a terminal JSON result.
+Run monitor integrations to list available integrations as JSON.
+Run monitor <integration> --help for conditions, prerequisites, and result fields.
+${pollingHelp}`
 
 const duration = (value: string) => {
   const match = /^(\d+(?:\.\d+)?)(ms|s|m|h)$/.exec(value)
@@ -346,6 +384,19 @@ export const monitor = async (
 export const main = async (args: string[]): Promise<number> => {
   if (args.length === 1 && (args[0] === "--help" || args[0] === "-h")) {
     console.log(usage)
+    return 0
+  }
+
+  if (args.length === 1 && args[0] === "integrations") {
+    console.log(
+      JSON.stringify(integrations.map(({ name, description }) => ({ name, description }))),
+    )
+    return 0
+  }
+
+  const integration = integrations.find(({ name }) => name === args[0])
+  if (integration && args.length === 2 && (args[1] === "--help" || args[1] === "-h")) {
+    console.log(integration.help)
     return 0
   }
 

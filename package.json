@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "install-rules": "bun scripts/install.ts",
+    "install-monitor": "bun scripts/install-monitor.ts",
     "lint": "biome lint scripts tools",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
