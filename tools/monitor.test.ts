@@ -2,7 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { evaluatePullRequest, parseArgs } from "./monitor.ts"
+import {
+  evaluateMergeRequest,
+  evaluatePipeline,
+  evaluatePullRequest,
+  parseArgs,
+} from "./monitor.ts"
 
 const url = "https://github.com/owner/repo/pull/123"
 const headSha = "a".repeat(40)
@@ -48,6 +53,7 @@ const counter = Bun.file(directory + "/counter")
 const index = await counter.exists() ? Number(await counter.text()) : 0
 await Bun.write(counter, String(index + 1))
 await Bun.write(directory + "/pid", String(process.pid))
+await Bun.write(directory + "/args-" + index, JSON.stringify(process.argv.slice(2)))
 const responses = await Bun.file(directory + "/responses.json").json()
 const response = responses[Math.min(index, responses.length - 1)]
 if (response.delay) await Bun.sleep(response.delay)
@@ -58,6 +64,7 @@ process.exitCode = response.code ?? 0
 `,
     { mode: 0o755 },
   )
+  await writeFile(join(directory, "glab"), await readFile(join(directory, "gh")), { mode: 0o755 })
 
   const process = Bun.spawn(
     [
@@ -99,6 +106,7 @@ process.exitCode = response.code ?? 0
 describe("arguments", () => {
   test("parses explicit conditions, duration units, and defaults", () => {
     expect(parseArgs(["github-pr", `${url}/`, "--until", "merged", "--timeout", "1.5h"])).toEqual({
+      target: "github-pr",
       url,
       until: "merged",
       timeout: 5_400_000,
@@ -180,7 +188,11 @@ describe("monitor CLI", () => {
     const { code, result } = await run.done()
 
     expect(code).toBe(0)
-    expect(result).toEqual([{ name: "github-pr", description: expect.any(String) }])
+    expect(result.map((target: { name: string }) => target.name)).toEqual([
+      "github-pr",
+      "gitlab-mr",
+      "gitlab-pipeline",
+    ])
     expect(await Bun.file(join(run.directory, "counter")).exists()).toBe(false)
   })
 
@@ -386,7 +398,7 @@ test("installer deploys monitor skills and preserves the Codex override selectio
 
   for (const { name } of JSON.parse(stdout)) {
     const help = Bun.spawn(["monitor", name, "--help"], { env, cwd: tmpdir(), stdout: "pipe" })
-    expect(await new Response(help.stdout).text()).toContain("--until merged|checks-passed")
+    expect(await new Response(help.stdout).text()).toContain("--until")
     expect(await help.exited).toBe(0)
   }
 
@@ -397,4 +409,153 @@ test("installer deploys monitor skills and preserves the Codex override selectio
   expect(await readFile(join(homes.cursor, "rules/global.mdc"), "utf8")).toContain(
     "alwaysApply: true",
   )
+})
+
+describe("GitLab conditions", () => {
+  const pipeline = (status: string, sha = headSha, ref = "main") => ({ status, sha, ref })
+  const mr = (state = "opened", head_pipeline: unknown = null, sha = headSha) => ({
+    state,
+    head_pipeline,
+    sha,
+  })
+
+  test.each(["success", "skipped"])("accepts %s pipelines", (status) => {
+    expect(evaluatePipeline(pipeline(status)).status).toBe("ready")
+  })
+
+  test.each(["failed", "canceling", "canceled"])("fails %s pipelines", (status) => {
+    expect(evaluatePipeline(pipeline(status)).status).toBe("failed")
+  })
+
+  test.each([
+    "created",
+    "waiting_for_resource",
+    "waiting_for_callback",
+    "preparing",
+    "pending",
+    "running",
+    "manual",
+    "scheduled",
+  ])("waits for %s pipelines", (status) => {
+    expect(evaluatePipeline(pipeline(status)).status).toBe("pending")
+  })
+
+  test("rejects malformed and unknown responses", () => {
+    expect(() => evaluatePipeline({ status: "success" })).toThrow()
+    expect(() => evaluatePipeline(pipeline("unknown"))).toThrow()
+    expect(() => evaluatePipeline(pipeline("constructor"))).toThrow()
+    expect(() => evaluateMergeRequest({}, "merged")).toThrow()
+    expect(() => evaluateMergeRequest({ state: "opened", sha: headSha }, "checks-passed")).toThrow()
+  })
+
+  test("follows merge state and current-head pipeline", () => {
+    expect(evaluateMergeRequest(mr(), "merged").status).toBe("pending")
+    expect(evaluateMergeRequest(mr("merged"), "merged").status).toBe("ready")
+    expect(evaluateMergeRequest(mr("closed"), "checks-passed").status).toBe("failed")
+    expect(evaluateMergeRequest(mr(), "checks-passed").status).toBe("pending")
+    expect(
+      evaluateMergeRequest(mr("opened", pipeline("success", "old")), "checks-passed"),
+    ).toMatchObject({ status: "pending", headSha })
+    expect(evaluateMergeRequest(mr("opened", pipeline("success")), "checks-passed").status).toBe(
+      "ready",
+    )
+  })
+
+  test("accepts merged result pipelines built from the current head", () => {
+    const merged = mr("opened", pipeline("success", "c".repeat(40)))
+
+    expect(evaluateMergeRequest(merged, "checks-passed", ["d".repeat(40), headSha])).toEqual({
+      status: "ready",
+      reason: "Pipeline success",
+      headSha,
+    })
+    expect(evaluateMergeRequest(merged, "checks-passed", ["d".repeat(40), "old"]).status).toBe(
+      "pending",
+    )
+  })
+
+  test.each(["gitlab-mr", "gitlab-pipeline"])(
+    "polls %s using the URL host and encoded project",
+    async (target) => {
+      const resource = target === "gitlab-mr" ? "merge_requests" : "pipelines"
+      const gitlabUrl = `https://gitlab.example/group/subgroup/repo/-/${resource}/123`
+      const value = target === "gitlab-mr" ? mr("opened", pipeline("success")) : pipeline("success")
+      const run = await start([{ value }], [], "checks-passed", [
+        target,
+        gitlabUrl,
+        "--until",
+        "checks-passed",
+      ])
+      const { code, result, directory } = await run.done()
+
+      expect(code).toBe(0)
+      expect(result).toMatchObject({ status: "ready", headSha, url: gitlabUrl })
+      expect(JSON.parse(await readFile(join(directory, "args-0"), "utf8"))).toEqual([
+        "api",
+        `projects/group%2Fsubgroup%2Frepo/${resource}/123`,
+        "--hostname",
+        "gitlab.example",
+      ])
+    },
+  )
+
+  test("resolves merged result pipelines through the merge commit parents", async () => {
+    const mergeCommit = "c".repeat(40)
+    const gitlabUrl = "https://gitlab.example/group/repo/-/merge_requests/7"
+    const run = await start(
+      [
+        { value: mr("opened", pipeline("success", mergeCommit, "refs/merge-requests/7/merge")) },
+        { value: { id: mergeCommit, parent_ids: ["d".repeat(40), headSha] } },
+      ],
+      [],
+      "checks-passed",
+      [
+        "gitlab-mr",
+        gitlabUrl,
+        "--until",
+        "checks-passed",
+        "--interval",
+        "1ms",
+        "--timeout",
+        "3s",
+      ],
+    )
+    const { code, result, directory } = await run.done()
+
+    expect(code).toBe(0)
+    expect(result).toMatchObject({ status: "ready", headSha })
+    expect(JSON.parse(await readFile(join(directory, "args-1"), "utf8"))).toEqual([
+      "api",
+      `projects/group%2Frepo/repository/commits/${mergeCommit}`,
+      "--hostname",
+      "gitlab.example",
+    ])
+  })
+
+  test("validates GitLab URLs and pipeline conditions", () => {
+    expect(
+      parseArgs([
+        "gitlab-mr",
+        "https://gitlab.com/group/repo/-/merge_requests/1",
+        "--until",
+        "merged",
+      ]).target,
+    ).toBe("gitlab-mr")
+    for (const url of [
+      "http://gitlab.com/group/repo/-/pipelines/1",
+      "https://gitlab.com/group/repo/-/merge_requests/1",
+      "https://gitlab.com/group/repo/-/pipelines/0",
+      "https://user@gitlab.com/group/repo/-/pipelines/1",
+    ]) {
+      expect(() => parseArgs(["gitlab-pipeline", url, "--until", "checks-passed"])).toThrow()
+    }
+    expect(() =>
+      parseArgs([
+        "gitlab-pipeline",
+        "https://gitlab.com/group/repo/-/pipelines/1",
+        "--until",
+        "merged",
+      ]),
+    ).toThrow()
+  })
 })
