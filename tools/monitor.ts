@@ -41,7 +41,7 @@ const pollingHelp = `
 Durations accept ms, s, m, or h. Stdout contains one terminal JSON result.
 Exit codes: 0 ready, 1 failed, 2 error, 124 timeout, 130 cancelled.`
 
-const integrations = [
+const targets = [
   {
     name: "github-pr",
     description: "Wait for a GitHub pull request to merge or its reported CI checks to pass",
@@ -70,13 +70,13 @@ Examples:
   },
 ]
 
-const usage = `Usage: monitor <integration> [options]
-       monitor integrations
-       monitor <integration> --help
+const usage = `Usage: monitor <target> [options]
+       monitor targets
+       monitor <target> --help
 
 Wait for an external condition, then return a terminal JSON result.
-Run monitor integrations to list available integrations as JSON.
-Run monitor <integration> --help for conditions, prerequisites, and result fields.
+Run monitor targets to list available targets as JSON.
+Run monitor <target> --help for conditions, prerequisites, and result fields.
 ${pollingHelp}`
 
 const duration = (value: string) => {
@@ -387,16 +387,16 @@ export const main = async (args: string[]): Promise<number> => {
     return 0
   }
 
-  if (args.length === 1 && args[0] === "integrations") {
+  if (args.length === 1 && args[0] === "targets") {
     console.log(
-      JSON.stringify(integrations.map(({ name, description }) => ({ name, description }))),
+      JSON.stringify(targets.map(({ name, description }) => ({ name, description }))),
     )
     return 0
   }
 
-  const integration = integrations.find(({ name }) => name === args[0])
-  if (integration && args.length === 2 && (args[1] === "--help" || args[1] === "-h")) {
-    console.log(integration.help)
+  const target = targets.find(({ name }) => name === args[0])
+  if (target && args.length === 2 && (args[1] === "--help" || args[1] === "-h")) {
+    console.log(target.help)
     return 0
   }
 

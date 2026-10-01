@@ -175,8 +175,8 @@ describe("GitHub conditions", () => {
 })
 
 describe("monitor CLI", () => {
-  test("discovers integrations without invoking gh", async () => {
-    const run = await start([], [], "merged", ["integrations"])
+  test("discovers targets without invoking gh", async () => {
+    const run = await start([], [], "merged", ["targets"])
     const { code, result } = await run.done()
 
     expect(code).toBe(0)
@@ -185,7 +185,7 @@ describe("monitor CLI", () => {
   })
 
   test.each(["--help", "-h"])(
-    "integration %s works without a URL or authentication",
+    "target %s works without a URL or authentication",
     async (flag) => {
       const run = await start([], [], "merged", ["github-pr", flag])
       const [stdout, stderr, code] = await Promise.all([
@@ -202,7 +202,7 @@ describe("monitor CLI", () => {
     },
   )
 
-  test("unknown integration help returns an error", async () => {
+  test("unknown target help returns an error", async () => {
     const run = await start([], [], "merged", ["unknown", "--help"])
     const { code, result } = await run.done()
     expect(code).toBe(2)
@@ -370,7 +370,7 @@ test("installer deploys monitor skills and preserves the Codex override selectio
     expect(await Bun.file(join(home, "skills/monitor/SKILL.md")).exists()).toBe(true)
   }
 
-  const installed = Bun.spawn(["monitor", "integrations"], {
+  const installed = Bun.spawn(["monitor", "targets"], {
     env,
     cwd: tmpdir(),
     stdout: "pipe",
