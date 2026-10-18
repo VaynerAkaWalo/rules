@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readFile, realpath, writeFile } from "node:fs/promises"
+import { access, cp, mkdir, readdir, readFile, realpath, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { installMonitor } from "./install-monitor.ts"
@@ -67,6 +67,7 @@ const render = async (template: string | undefined, instructions: string) => {
 
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
+  const skills = await readdir(join(root, "skills"))
   await installMonitor()
 
   for (const target of targets) {
@@ -76,13 +77,14 @@ const install = async (source: string) => {
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, await render(target.template, instructions))
 
-    const skill = join(directory, "skills", "monitor", "SKILL.md")
-
-    await mkdir(dirname(skill), { recursive: true })
-    await copyFile(join(root, "skills", "monitor", "SKILL.md"), skill)
-
     console.log(`${target.name}: ${await realpath(path)}`)
-    console.log(`${target.name} monitor: ${await realpath(skill)}`)
+
+    for (const skill of skills) {
+      const destination = join(directory, "skills", skill)
+      await cp(join(root, "skills", skill), destination, { recursive: true })
+
+      console.log(`${target.name} ${skill}: ${await realpath(destination)}`)
+    }
   }
 }
 
