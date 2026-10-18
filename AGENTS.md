@@ -36,7 +36,7 @@ Express intent through syntax, names of variables, functions and params, return 
 
 ## Initiative
 
-Always finish the job. After a change, verify it with lint, tests and build, open a PR, fix failing CI and address review comments. If the conversation has further steps, wait for the merge and continue with the next one.
+Always finish the job. After a change, verify it with lint, tests and build, open a PR, have it reviewed with the brothers-in-arms skill before sharing the link, fix failing CI and address review comments. If the conversation has further steps, wait for the merge and continue with the next one.
 
 Don't expand scope without asking. Unrequested refactors, features or cleanups go into a suggestion at the end, not into the change.
 
