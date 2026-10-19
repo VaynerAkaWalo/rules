@@ -14,7 +14,7 @@ monitor targets
 monitor <target> --help
 ```
 
-Keep the turn active while monitoring. If the harness yields a process or session handle, wait on that same handle using its native process-wait tool until the command finishes. Choose wait durations that fit the expected process and the harness limits. A ten-minute wait can be appropriate for a pipeline. The user can interrupt monitoring when needed. Do not end the turn with a request to resume while the monitor is pending. A detached script cannot wake a finished agent turn.
+When using the `monitor` command, keep the turn active until the command finishes. If the harness yields a process or session handle, wait on that same handle using its native process-wait tool until the command finishes. Choose wait durations that fit the expected process and the harness limits. A ten-minute wait can be appropriate for a pipeline. The user can interrupt monitoring when needed. Do not end the turn with a request to resume while the monitor is pending. A detached script cannot wake a finished agent turn.
 
 Monitoring commands write one terminal JSON result with `status`, `reason`, and `elapsedSeconds`, plus target-specific fields described in the help. Progress appears on stderr only when the observation changes. Read the JSON directly instead of wrapping the command to extract its exit code.
 
