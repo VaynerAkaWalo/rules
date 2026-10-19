@@ -1,6 +1,6 @@
 ---
 name: monitor
-description: Monitor external conditions that block the current task, then continue authorized work without requiring a manual resume.
+description: Monitor external conditions that block the current task and aren't covered by native harness monitoring like T3 Code's watch_pull_request, then continue authorized work without requiring a manual resume.
 ---
 
 Use monitoring when an external condition blocks the next step of the current task. Choose the condition, a bounded deadline, and what to do when it resolves before starting. Monitoring does not authorize actions that need approval.
