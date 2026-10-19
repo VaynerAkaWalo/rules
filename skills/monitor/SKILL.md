@@ -1,9 +1,11 @@
 ---
 name: monitor
-description: Monitor external conditions that block the current task, then continue authorized work without requiring a manual resume.
+description: Monitor external conditions that block the current task and T3 Code can't watch natively with watch_pull_request, delegated task notifications or schedule_task, then continue authorized work without requiring a manual resume.
 ---
 
 Use monitoring when an external condition blocks the next step of the current task. Choose the condition, a bounded deadline, and what to do when it resolves before starting. Monitoring does not authorize actions that need approval.
+
+Use T3 Code's native monitoring whenever it covers the condition. Call `watch_pull_request` for pull request checks, reviews, comments and conflicts, rely on the completion notification for delegated tasks, and use `schedule_task` for recurring checks, then end the turn and let T3 Code wake you. Use the `monitor` command only for conditions T3 Code cannot watch natively.
 
 The `monitor` command is installed on PATH by the rules installer. Discover available targets and read the relevant target's help before choosing a command.
 
@@ -12,7 +14,7 @@ monitor targets
 monitor <target> --help
 ```
 
-Keep the turn active while monitoring. If the harness yields a process or session handle, wait on that same handle using its native process-wait tool until the command finishes. Choose wait durations that fit the expected process and the harness limits. A ten-minute wait can be appropriate for a pipeline. The user can interrupt monitoring when needed. Do not end the turn with a request to resume while the monitor is pending. A detached script cannot wake a finished agent turn.
+When using the `monitor` command, keep the turn active until the command finishes. If the harness yields a process or session handle, wait on that same handle using its native process-wait tool until the command finishes. Choose wait durations that fit the expected process and the harness limits. A ten-minute wait can be appropriate for a pipeline. The user can interrupt monitoring when needed. Do not end the turn with a request to resume while the monitor is pending. A detached script cannot wake a finished agent turn.
 
 Monitoring commands write one terminal JSON result with `status`, `reason`, and `elapsedSeconds`, plus target-specific fields described in the help. Progress appears on stderr only when the observation changes. Read the JSON directly instead of wrapping the command to extract its exit code.
 
