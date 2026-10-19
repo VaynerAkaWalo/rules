@@ -1,11 +1,11 @@
 ---
 name: monitor
-description: Monitor external conditions that block the current task and aren't covered by native harness monitoring like T3 Code's watch_pull_request, then continue authorized work without requiring a manual resume.
+description: Monitor external conditions that block the current task and T3 Code can't watch natively with watch_pull_request, delegated task notifications or schedule_task, then continue authorized work without requiring a manual resume.
 ---
 
 Use monitoring when an external condition blocks the next step of the current task. Choose the condition, a bounded deadline, and what to do when it resolves before starting. Monitoring does not authorize actions that need approval.
 
-Prefer the harness's native monitoring when it covers the condition. In T3 Code, use `watch_pull_request` for pull request checks, reviews, comments and conflicts, rely on the completion notification for delegated tasks, and use `schedule_task` for recurring checks, then end the turn and let T3 Code wake you. Use the `monitor` command only for conditions the harness cannot watch natively or when no native mechanism is available.
+Use T3 Code's native monitoring whenever it covers the condition. Call `watch_pull_request` for pull request checks, reviews, comments and conflicts, rely on the completion notification for delegated tasks, and use `schedule_task` for recurring checks, then end the turn and let T3 Code wake you. Use the `monitor` command only for conditions T3 Code cannot watch natively.
 
 The `monitor` command is installed on PATH by the rules installer. Discover available targets and read the relevant target's help before choosing a command.
 
