@@ -9,7 +9,7 @@ Use the newest frontier model of the other family, so Claude work goes to the la
 
 ## Scope
 
-The first review covers the whole merge request. Later reviews cover only the commits since the last review both of you agreed on. Skip the review for changes the user dictated exactly or that don't change behavior, like renames, copy or formatting, and say in your reply that you skipped it.
+The first review covers the whole merge request. Every later review covers only the commits since the previous review, together with any findings still open from it. You can skip a review when every commit since the previous one was dictated exactly by the user or doesn't change behavior, like renames, copy or formatting, and say in your reply that you skipped it.
 
 ## What counts as a finding
 
