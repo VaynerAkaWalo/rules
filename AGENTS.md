@@ -38,7 +38,7 @@ Express intent through syntax, names of variables, functions and params, return 
 
 Pick the simplest design that meets today's requirements. Reuse the existing mechanism or the pattern sibling components already follow before building a new one, and don't add resources, config or abstractions for cases that aren't planned.
 
-Validate input only at the boundaries where untrusted data enters, and trust types and your own code inside them. Don't add guards, fallbacks or tests for paths that can't realistically fail, because they bury the code that matters.
+Write code for the states that can actually happen. Validate untrusted input once where it enters the system, and inside it trust the types, the callers and your own code. Don't add null checks, try/catch, fallbacks or tests for states that can't occur, because they bury the logic that matters and a silent fallback hides the bug instead of surfacing it.
 
 ## Initiative
 
