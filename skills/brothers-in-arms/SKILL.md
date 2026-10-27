@@ -19,6 +19,6 @@ Also ask it to check the change against the project and user instruction files, 
 
 ## Loop
 
-Fix the findings or explain why you won't, then request a fresh review of the new commits that includes only the findings you declined and why. Repeat until both of you agree it is ready to merge. Bring a disagreement you can't resolve, or anything still open after three rounds, to the user instead of looping.
+Fix the findings or explain why you won't, then request a fresh review of the new commits that includes only the findings you declined and why. Repeat until both of you agree it is ready to merge. Bring a disagreement you can't resolve, or anything still open after three rounds since the user's last change request, to the user instead of looping.
 
 Return the link only after that agreement, together with a short note on what the review changed.
