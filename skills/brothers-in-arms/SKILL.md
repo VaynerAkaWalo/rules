@@ -13,9 +13,11 @@ The first review covers the whole merge request. Every later review covers only 
 
 ## What counts as a finding
 
-Ask the reviewer to report only problems that can realistically happen given how the code is actually called and deployed, each with a concrete failure scenario. Speculative edge cases, guards against inputs that can't occur and style preferences no rule backs are not findings.
+Ask the reviewer to report only problems that can realistically happen given how the code is actually called and deployed, each with a concrete failure scenario. Speculative edge cases and style preferences no rule backs are not findings.
 
 Also ask it to check the change against the project and user instruction files, like AGENTS.md and CLAUDE.md, and to name the rule each such finding breaks. Pass it the paths of those files, because a reviewer from another provider may not load them on its own.
+
+For visual changes, pass the screenshots too and ask whether they show what the user asked for.
 
 ## Loop
 
