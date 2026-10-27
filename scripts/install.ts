@@ -1,7 +1,6 @@
 import { access, cp, mkdir, readdir, readFile, realpath, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { installMonitor } from "./install-monitor.ts"
 
 type Target = {
   name: string
@@ -68,7 +67,6 @@ const render = async (template: string | undefined, instructions: string) => {
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
   const skills = await readdir(join(root, "skills"))
-  await installMonitor()
 
   for (const target of targets) {
     const directory = home(target)
