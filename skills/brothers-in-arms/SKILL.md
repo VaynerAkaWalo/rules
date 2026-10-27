@@ -17,6 +17,8 @@ Ask the reviewer to report only problems that can realistically happen given how
 
 Also ask it to check the change against the project and user instruction files, like AGENTS.md and CLAUDE.md, and to name the rule each such finding breaks. Pass it the paths of those files, because a reviewer from another provider may not load them on its own.
 
+For visual changes, pass the screenshots too and ask whether they show what the user asked for.
+
 ## Loop
 
 Fix the findings or explain why you won't, then request a fresh review of the new commits that includes only the findings you declined and why. Repeat until both of you agree it is ready to merge. Bring a disagreement you can't resolve, or anything still open after three rounds, to the user instead of looping. Start counting again when the user asks for a substantial change, like a redesign or new behavior, but not for nits or small tweaks.
