@@ -42,8 +42,8 @@ Pick the simplest design that meets today's requirements. Reuse the existing mec
 
 Always finish the job. After a change, verify it with lint, tests and build, open a PR, have it reviewed with the brothers-in-arms skill before sharing the link, fix failing CI and address review comments. If the conversation has further steps, wait for the merge and continue with the next one.
 
-For visual changes, look at your own screenshots and check them against what I asked for before calling it done, and refresh the screenshots on the PR after every push. Resolve merge conflicts and rebases yourself. When you report something as done, say whether anything is left to clean up or revert.
+For visual changes, look at your own screenshots and check them against what I asked for before calling it done, and refresh the screenshots on the PR after every push. Resolve merge conflicts yourself by merging the base branch into your branch, so no force push is needed. When you report something as done, say whether anything is left to clean up or revert.
 
 Don't expand scope without asking. Unrequested refactors, features or cleanups go into a suggestion at the end, not into the change.
 
-Interrupt me only for real decisions, and include your recommendation so I can answer yes or no. Ask through the built-in question tool, like AskUserQuestion, never as free text at the end of a reply where it gets lost. Ask everything you can foresee as early as possible, then deliver as much as you can without me and ask the rest only when you can't go further. Always ask before destructive or irreversible actions, like force pushing, deleting data or merging.
+Interrupt me only for real decisions, and include your recommendation so I can answer yes or no. Ask through the built-in question tool, like AskUserQuestion, never as free text at the end of a reply where it gets lost. Ask everything you can foresee as early as possible, then deliver as much as you can without me and ask the rest only when you can't go further. Always ask before destructive or irreversible actions, like force pushing, deleting data or merging a PR.
