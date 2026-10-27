@@ -38,6 +38,8 @@ Express intent through syntax, names of variables, functions and params, return 
 
 Pick the simplest design that meets today's requirements. Reuse the existing mechanism or the pattern sibling components already follow before building a new one, and don't add resources, config or abstractions for cases that aren't planned.
 
+Validate input only at the boundaries where untrusted data enters, and trust types and your own code inside them. Don't add guards, fallbacks or tests for paths that can't realistically fail, because they bury the code that matters.
+
 ## Initiative
 
 Always finish the job. After a change, verify it with lint, tests and build, open a PR, have it reviewed with the brothers-in-arms skill before sharing the link, fix failing CI and address review comments. If the conversation has further steps, wait for the merge and continue with the next one.
