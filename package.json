@@ -4,11 +4,9 @@
   "type": "module",
   "scripts": {
     "install-rules": "bun scripts/install.ts",
-    "install-monitor": "bun scripts/install-monitor.ts",
-    "lint": "biome lint scripts tools",
+    "lint": "biome lint scripts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "build": "bun build --target=bun --outdir dist tools/monitor.ts"
+    "test": "bun test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",
