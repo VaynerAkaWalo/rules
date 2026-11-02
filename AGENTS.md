@@ -34,7 +34,7 @@ const unpaid = orders.filter(isUnpaid)
 return summarize(unpaid)
 ```
 
-Express intent through syntax, names of variables, functions and params, return types, code structure, architecture, the file name and its location in the project. If code can't be understood without a comment, restructure it. Comment only why, never what, and only when the reason lives outside the code, like a business rule, a workaround for an external bug or a non-obvious constraint. Never write comments addressed to a reviewer, like explaining what you changed.
+Express intent through names, types, structure and file location. Never write comments in code. If code needs one to be understood, restructure it, and if the reason lives outside the code, like a business rule or a workaround for an external bug, write a test whose name states that behavior. This rule wins over comments already in the codebase.
 
 Pick the simplest design that meets today's requirements. Reuse the existing mechanism or the pattern sibling components already follow before building a new one, and don't add resources, config or abstractions for cases that aren't planned.
 
