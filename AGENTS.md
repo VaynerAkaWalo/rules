@@ -12,7 +12,7 @@ Write sentences of natural and varied length. Connect related thoughts the way p
 
 Keep documentation short and write it only when asked. Long docs go out of date and nobody reads them.
 
-Specs and design docs contain only decisions we agreed on. Settle open points with me before writing them down instead of collecting them as open questions. My examples illustrate the idea, so don't copy them verbatim.
+Specs and design docs contain only decisions we agreed on. Settle open points with me before writing them down instead of collecting them as open questions. My examples illustrate the idea, so don't copy them verbatim. State each rule before its examples, then check every example against every rule.
 
 ## Communication
 
@@ -40,12 +40,22 @@ Pick the simplest design that meets today's requirements. Reuse the existing mec
 
 Write code for the states that can actually happen. Validate untrusted input once where it enters the system, and inside it trust the types, the callers and your own code. Don't add null checks, try/catch, fallbacks or tests for states that can't occur, because they bury the logic that matters and a silent fallback hides the bug instead of surfacing it.
 
+Before writing code that takes outside input, calls another system or persists state, work out which failures realistically happen given how it's called and deployed, like a retry after partial success or a crash between a side effect and saving its result, and handle those once at the boundary rather than in layers. Leave out scenarios that would need an unusual caller or setup. Input you can't parse is an error to surface, never a clean result.
+
+Check how an external system or tool actually behaves in its docs, its source or a quick experiment before relying on it, and say in the PR what you checked.
+
+When you change a type, field, enum or schema, find every consumer and parallel definition and update them in the same change.
+
+A new test has to fail when the change it covers is reverted, so revert it once and watch the test fail.
+
 ## Initiative
 
 Always finish the job. After a change, verify it with lint, tests and build, open a PR, have it reviewed with the brothers-in-arms skill before sharing the link, fix failing CI and address review comments. If the conversation has further steps, wait for the merge and continue with the next one.
 
-For visual changes, look at your own screenshots and check them against what I asked for before calling it done, and refresh the screenshots on the PR after every push. Resolve merge conflicts yourself by merging the base branch into your branch, so no force push is needed. When you report something as done, say whether anything is left to clean up or revert.
+Before opening the PR, think through the rollout: existing data, clients still running the old version, deploy ordering, and release steps the repo expects, like version bumps or a prerequisite config change. In the PR description claim only what you verified and name what you didn't.
+
+For visual changes, screenshot every page and state the change touches, including empty, single-item and error states, and check keyboard focus and contrast. Look at your own screenshots and check them against what I asked for before calling it done, and refresh the screenshots on the PR after every push. Resolve merge conflicts yourself by merging the base branch into your branch or rebasing onto it. After a rebase you can force push your own branch with --force-with-lease without asking. When you report something as done, say whether anything is left to clean up or revert.
 
 Don't expand scope without asking. Unrequested refactors, features or cleanups go into a suggestion at the end, not into the change.
 
-Interrupt me only for real decisions, and include your recommendation so I can answer yes or no. Ask through the built-in question tool, like AskUserQuestion, never as free text at the end of a reply where it gets lost. Ask everything you can foresee as early as possible, then deliver as much as you can without me and ask the rest only when you can't go further. Always ask before destructive or irreversible actions, like force pushing, deleting data or merging a PR.
+Interrupt me only for real decisions, and include your recommendation so I can answer yes or no. Ask through the built-in question tool, like AskUserQuestion, never as free text at the end of a reply where it gets lost. Ask everything you can foresee as early as possible, then deliver as much as you can without me and ask the rest only when you can't go further. Always ask before destructive or irreversible actions, like force pushing anything other than your own rebased branch, deleting data or merging a PR.
