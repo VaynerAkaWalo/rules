@@ -21,6 +21,8 @@ For visual changes, pass the screenshots too and ask whether they show what the 
 
 ## Loop
 
+Treat each finding as one example of a class of mistake. Before pushing the fix, look for the same mistake elsewhere in the change and the code around it, cover the class with a test, and recheck the paths the fix touches.
+
 Fix the findings or explain why you won't, then request a fresh review of the new commits that includes only the findings you declined and why. Repeat until both of you agree it is ready to merge. Bring a disagreement you can't resolve, or anything still open after three rounds, to the user instead of looping. Start counting again when the user asks for a substantial change, like a redesign or new behavior, but not for nits or small tweaks.
 
 Return the link only after that agreement, together with a short note on what the review changed.
