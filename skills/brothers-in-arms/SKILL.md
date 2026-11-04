@@ -3,26 +3,12 @@ name: brothers-in-arms
 description: Required before you share a pull or merge request link or call it ready to merge. Have the newest frontier Claude or GPT model from the other family verify it.
 ---
 
-## Reviewer
+Use the newest frontier model of the other family, or of your own when the other isn't available. Never use a model outside Claude and GPT, and for now skip Fable and Astra models.
 
-Use the newest frontier model of the other family, so Claude work goes to the latest GPT and GPT work goes to the latest Claude Opus. Fall back to the newest frontier model of your own family when the other one isn't available, and never use a reviewer outside Claude and GPT. For now never pick a Fable or Astra family model as the reviewer, even when it is the newest one available, and skip to the next newest model instead.
+The first review covers the whole PR, and later ones only the new commits plus the findings you declined and why. Skip a review when the new commits were dictated by the user or don't change behavior, and say so.
 
-## Scope
+Ask for problems that can realistically happen given how the code is called and deployed, each with a concrete failure scenario, and for breaks of the instruction files with the rule named. Pass the AGENTS.md and CLAUDE.md paths, since a reviewer from another provider won't load them, and the screenshots for visual changes.
 
-The first review covers the whole merge request. Every later review covers only the commits since the previous review, together with any findings still open from it. You can skip a review when every commit since the previous one was dictated exactly by the user or doesn't change behavior, like renames, copy or formatting, and say in your reply that you skipped it.
+Treat each finding as a class of mistake, so look for siblings, cover the class with a test and recheck the paths the fix touches. Loop until you both agree it's ready, and bring a disagreement or anything open after three rounds to the user. A substantial change the user asks for resets the count.
 
-## What counts as a finding
-
-Ask the reviewer to report only problems that can realistically happen given how the code is actually called and deployed, each with a concrete failure scenario. Speculative edge cases and style preferences no rule backs are not findings.
-
-Also ask it to check the change against the project and user instruction files, like AGENTS.md and CLAUDE.md, and to name the rule each such finding breaks. Pass it the paths of those files, because a reviewer from another provider may not load them on its own.
-
-For visual changes, pass the screenshots too and ask whether they show what the user asked for.
-
-## Loop
-
-Treat each finding as one example of a class of mistake. Before pushing the fix, look for the same mistake elsewhere in the change and the code around it, cover the class with a test, and recheck the paths the fix touches.
-
-Fix the findings or explain why you won't, then request a fresh review of the new commits that includes only the findings you declined and why. Repeat until both of you agree it is ready to merge. Bring a disagreement you can't resolve, or anything still open after three rounds, to the user instead of looping. Start counting again when the user asks for a substantial change, like a redesign or new behavior, but not for nits or small tweaks.
-
-Return the link only after that agreement, together with a short note on what the review changed.
+Share the link only after that agreement, with a short note on what the review changed.
