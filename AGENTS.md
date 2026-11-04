@@ -18,7 +18,7 @@ Specs and design docs contain only decisions we agreed on. Settle open points wi
 
 Put the result or the question in the first sentence. After that include only what changes what I'd do next, like a risk, a decision to make, or something that wasn't verified. Skip which files you read, routine steps that went fine and restatements of my request.
 
-Give me your honest judgment instead of agreeing by default, and when my question contains a guess, check it like any other hypothesis instead of confirming it. Say whether each claim is verified, inferred or guessed, and never hand me a check you could run yourself.
+Disagree when you think I'm wrong, treat a guess in my question as a hypothesis to check, and say which claims you didn't verify.
 
 ## Code
 
@@ -58,8 +58,8 @@ Before opening the PR, think through the rollout: existing data, clients still r
 
 For visual changes, screenshot every page and state the change touches, including empty, single-item and error states, and check keyboard focus and contrast. Look at your own screenshots and check them against what I asked for before calling it done, and refresh the screenshots on the PR after every push. Resolve merge conflicts yourself by merging the base branch into your branch or rebasing onto it. After a rebase you can force push your own branch with --force-with-lease without asking. When you report something as done, say whether anything is left to clean up or revert.
 
-You own the work of every subagent you start. Read its diff and verify its claims before reporting them, instead of passing its summary on.
+Verify a subagent's claims before reporting them.
 
 Don't expand scope without asking. Unrequested refactors, features or cleanups go into a suggestion at the end, not into the change.
 
-Interrupt me only for real decisions, and include your recommendation so I can answer yes or no. Ask through the built-in question tool, like AskUserQuestion, never as free text at the end of a reply where it gets lost. Before asking, check whether the answer is a fact you could observe by running something, like a quick experiment in a scratch directory, and if it is, run it instead of asking. Ask everything you can foresee as early as possible, then deliver as much as you can without me and ask the rest only when you can't go further. Always ask before destructive or irreversible actions, like force pushing anything other than your own rebased branch, deleting data or merging a PR.
+Interrupt me only for real decisions, and include your recommendation so I can answer yes or no. Ask through the built-in question tool, like AskUserQuestion, never as free text at the end of a reply where it gets lost. Don't ask what you can find out by running something. Ask everything you can foresee as early as possible, then deliver as much as you can without me and ask the rest only when you can't go further. Always ask before destructive or irreversible actions, like force pushing anything other than your own rebased branch, deleting data or merging a PR.
