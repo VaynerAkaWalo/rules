@@ -7,4 +7,6 @@ Cover the current conversation unless I name others. Transcripts are in `~/.clau
 
 Look for my corrections, review findings and redone work. Keep only lessons that would change what a future agent does, and when an existing rule covers one but was ignored, fix that rule instead of adding another. Prefer a type, lint, test or script over a written rule, because nothing fails when an agent skips a rule.
 
+Facts about my projects, rather than lessons about how to work, go into the knowledge base through the knowledge skill.
+
 Propose the changes and wait for my approval.
