@@ -39,7 +39,7 @@ test("installer deploys rules and skills and preserves the Codex override select
 
   for (const name of ["claude", "codex", "cursor", "grok"]) {
     const home = homes[name]
-    for (const skill of ["bro", "brothers-in-arms", "bugfix", "on-behalf", "pr-feedback", "reflect"]) {
+    for (const skill of ["bro", "brothers-in-arms", "bugfix", "ci-triage", "on-behalf", "reflect"]) {
       expect(await Bun.file(join(home, "skills", skill, "SKILL.md")).exists()).toBe(true)
     }
   }
