@@ -1,6 +1,6 @@
 ---
 name: brothers-in-arms
-description: Required before you share a pull or merge request link or call it ready to merge. Have GPT 6.1 Sol verify it, or Grok 4.7 when Codex is out of quota.
+description: Use before you share a pull or merge request link or call it ready to merge.
 ---
 
 Use GPT 6.1 Sol with medium effort. When Codex is out of quota, use Grok 4.7 with high effort instead. Never use a Claude model as the reviewer.
