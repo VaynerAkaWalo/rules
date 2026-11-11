@@ -1,9 +1,9 @@
 ---
 name: brothers-in-arms
-description: Required before you share a pull or merge request link or call it ready to merge. Have the newest frontier Claude or GPT model from the other family verify it.
+description: Use before you share a pull or merge request link or call it ready to merge.
 ---
 
-Use the newest frontier model of the other family, or of your own when the other isn't available. Never use a model outside Claude and GPT, and for now skip Fable and Astra models.
+Use GPT 6.1 Sol with medium effort. When Codex is out of quota, use Grok 4.7 with high effort instead. Never use a Claude model as the reviewer.
 
 The first review covers the whole PR, and later ones only the new commits plus the findings you declined and why. Skip a review when the new commits were dictated by the user or don't change behavior, and say so.
 
