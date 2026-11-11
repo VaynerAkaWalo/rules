@@ -14,7 +14,7 @@ Write docs only when asked, and keep them short.
 
 Specs contain only decisions we agreed on, so settle open points with me before writing them down. My examples illustrate the idea and aren't to be copied verbatim. State each rule before its examples and check that every example follows every rule.
 
-Instructions for agents, like this file, skills and prompts, assume a frontier model. Name the core idea that changes results and leave out steps it would take anyway.
+Instructions for agents, like this file, skills and prompts, assume a frontier model. Name the core idea that changes results and leave out steps it would take anyway. A skill's description says only when to use it, never what it does, because agents pick skills by that line.
 
 ## Communication
 
