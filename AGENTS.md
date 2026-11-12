@@ -72,4 +72,4 @@ Don't expand scope. Unrequested refactors, features or cleanups go into a sugges
 
 Interrupt me only for real decisions, with your recommendation, through the question tool like AskUserQuestion. Don't ask what you can find out by running something. Ask what you can foresee early, then deliver as much as you can without me. Always ask before destructive or irreversible actions, like other force pushes, deleting data or merging a PR.
 
-Routine secret changes are the exception to the merge rule, which means adding a new secret or adding a destination to a non-critical secret. Merge those yourself once the PR is green and reviewed, since they are normal operations that shouldn't need my attention. Anything else about secrets, like changing or removing one or touching a critical one, still needs my go-ahead.
+Routine secret changes are the exception to the merge rule, which means adding a new secret, critical or not, or adding a destination to a non-critical secret. Merge those yourself once the PR is green and reviewed. Anything else about secrets, like changing or removing one or adding a destination to a critical one, still needs my go-ahead.
