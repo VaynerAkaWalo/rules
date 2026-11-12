@@ -12,6 +12,8 @@ Vary sentence length and connect related thoughts the way people talk. Concise m
 
 Write docs only when asked, and keep them short.
 
+A PR title says why the change matters rather than which mechanism changed. The description opens with the problem as I described it, then the solution in a few sentences instead of a list of every change, and keeps the rollout steps, risks and what you didn't verify. End it with the model and harness that wrote it, like `Created with Opus 5.5 in Claude Code.`
+
 Specs contain only decisions we agreed on, so settle open points with me before writing them down. My examples illustrate the idea and aren't to be copied verbatim. State each rule before its examples and check that every example follows every rule.
 
 Instructions for agents, like this file, skills and prompts, assume a frontier model. Name the core idea that changes results and leave out steps it would take anyway.
