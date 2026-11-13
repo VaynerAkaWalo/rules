@@ -86,6 +86,6 @@ const install = async (source: string) => {
   }
 }
 
-const source = process.argv[2] ? resolve(process.argv[2]) : join(root, "AGENTS.md")
+const source = process.argv[2] ? resolve(process.argv[2]) : join(root, "instructions.md")
 
 await install(source)
