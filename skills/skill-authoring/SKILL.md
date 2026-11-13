@@ -1,8 +1,10 @@
 ---
 name: skill-authoring
-description: Use when you create or update a skill.
+description: Use when you create or update a skill, an instruction file like AGENTS.md or CLAUDE.md, or a prompt for another agent.
 ---
 
-The description says only when to use the skill, never what it does, because agents pick skills by that line alone and a summary there makes them act on it without loading the body.
+Assume a frontier model. Name the core idea that changes results and leave out steps it would take anyway.
+
+The description of a skill says only when to use it, never what it does, because agents pick skills by that line alone and a summary there makes them act on it without loading the body.
 
 Keep facts that change, like model names or versions, in the body so the description stays stable.

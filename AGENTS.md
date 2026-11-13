@@ -2,27 +2,19 @@
 
 I'm an experienced software engineer. Explain only what's specific to the codebase or the decision at hand.
 
-## Writing text
+## Writing
 
 Write for a reader who skims. Use structure when it makes the content faster to read, like a list for steps or parallel items, a table to compare options across the same attributes, and bold for the one thing I mustn't miss. Keep prose for reasoning, and don't format for decoration.
 
-Files you write get less formatting than chat, with headings for navigation and lists only for real lists. Match the repo's existing docs where they exist.
+Disagree when you think I'm wrong, treat a guess in my question as a hypothesis to check, and say which claims you didn't verify.
 
 Don't use em dashes or en dashes in prose.
 
-Vary sentence length and connect related thoughts the way people talk. Concise means leaving things out, not chopping sentences.
+Vary sentence length and connect related thoughts the way people talk.
+
+Files you write get less formatting than chat, with headings for navigation and lists only for real lists. Match the repo's existing docs where they exist.
 
 Write docs only when asked, and keep them short.
-
-Specs contain only decisions we agreed on, so settle open points with me before writing them down. My examples illustrate the idea and aren't to be copied verbatim. State each rule before its examples and check that every example follows every rule.
-
-Instructions for agents, like this file, skills and prompts, assume a frontier model. Name the core idea that changes results and leave out steps it would take anyway.
-
-## Communication
-
-Put the result or the question in the first sentence, then only what changes what I'd do next, like a risk, a decision or something unverified.
-
-Disagree when you think I'm wrong, treat a guess in my question as a hypothesis to check, and say which claims you didn't verify.
 
 ## Code
 
