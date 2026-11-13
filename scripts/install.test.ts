@@ -5,21 +5,23 @@ import { join, resolve } from "node:path"
 
 const bun = process.execPath
 const directories: string[] = []
+const agents = ["claude", "codex", "cursor", "grok"]
 
 afterAll(async () => {
   await Promise.all(directories.map((directory) => rm(directory, { recursive: true, force: true })))
 })
 
-test("installer deploys rules and skills and preserves the Codex override selection", async () => {
+const createHomes = async () => {
   const directory = await mkdtemp(join(tmpdir(), "rules-install-"))
   directories.push(directory)
 
-  const homes: Record<string, string> = Object.fromEntries(
-    ["claude", "codex", "cursor", "grok"].map((name) => [name, join(directory, name)]),
-  )
-  await mkdir(homes.codex, { recursive: true })
-  await writeFile(join(homes.codex, "AGENTS.override.md"), "old instructions")
+  return Object.fromEntries(agents.map((name) => [name, join(directory, name)])) as Record<
+    string,
+    string
+  >
+}
 
+const runInstall = async (homes: Record<string, string>) => {
   const env = {
     ...Bun.env,
     CLAUDE_CONFIG_DIR: homes.claude,
@@ -36,8 +38,16 @@ test("installer deploys rules and skills and preserves the Codex override select
 
   await Promise.all([new Response(process.stdout).text(), new Response(process.stderr).text()])
   expect(await process.exited).toBe(0)
+}
 
-  for (const name of ["claude", "codex", "cursor", "grok"]) {
+test("installer deploys rules and skills and preserves the Codex override selection", async () => {
+  const homes = await createHomes()
+  await mkdir(homes.codex, { recursive: true })
+  await writeFile(join(homes.codex, "AGENTS.override.md"), "old instructions")
+
+  await runInstall(homes)
+
+  for (const name of agents) {
     const home = homes[name]
     for (const skill of ["bro", "brothers-in-arms", "bugfix", "on-behalf", "reflect"]) {
       expect(await Bun.file(join(home, "skills", skill, "SKILL.md")).exists()).toBe(true)
@@ -51,4 +61,19 @@ test("installer deploys rules and skills and preserves the Codex override select
   expect(await readFile(join(homes.cursor, "rules/global.mdc"), "utf8")).toContain(
     "alwaysApply: true",
   )
+})
+
+test("installer removes skills the repo used to have and keeps skills from elsewhere", async () => {
+  const homes = await createHomes()
+  const skills = join(homes.claude, "skills")
+
+  for (const skill of ["skill-authoring", "foreign-skill"]) {
+    await mkdir(join(skills, skill), { recursive: true })
+    await writeFile(join(skills, skill, "SKILL.md"), skill)
+  }
+
+  await runInstall(homes)
+
+  expect(await Bun.file(join(skills, "skill-authoring", "SKILL.md")).exists()).toBe(false)
+  expect(await Bun.file(join(skills, "foreign-skill", "SKILL.md")).exists()).toBe(true)
 })

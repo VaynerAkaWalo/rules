@@ -1,4 +1,4 @@
-import { access, cp, mkdir, readdir, readFile, realpath, writeFile } from "node:fs/promises"
+import { access, cp, mkdir, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
@@ -64,9 +64,16 @@ const render = async (template: string | undefined, instructions: string) => {
   return `${text.replaceAll("{{instructions}}", instructions.trimEnd())}\n`
 }
 
+const skillsInHistory = async () => {
+  const paths = await Bun.$`git -C ${root} log --format= --name-only -- skills`.text()
+
+  return new Set(paths.split("\n").filter(Boolean).map((path) => path.split("/")[1]))
+}
+
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
   const skills = await readdir(join(root, "skills"))
+  const removed = [...(await skillsInHistory())].filter((skill) => !skills.includes(skill))
 
   for (const target of targets) {
     const directory = home(target)
@@ -77,8 +84,15 @@ const install = async (source: string) => {
 
     console.log(`${target.name}: ${await realpath(path)}`)
 
+    const skillsDirectory = join(directory, "skills")
+
+    for (const skill of removed) {
+      await rm(join(skillsDirectory, skill), { recursive: true, force: true })
+    }
+
     for (const skill of skills) {
-      const destination = join(directory, "skills", skill)
+      const destination = join(skillsDirectory, skill)
+      await rm(destination, { recursive: true, force: true })
       await cp(join(root, "skills", skill), destination, { recursive: true })
 
       console.log(`${target.name} ${skill}: ${await realpath(destination)}`)
@@ -86,6 +100,6 @@ const install = async (source: string) => {
   }
 }
 
-const source = process.argv[2] ? resolve(process.argv[2]) : join(root, "AGENTS.md")
+const source = process.argv[2] ? resolve(process.argv[2]) : join(root, "instructions.md")
 
 await install(source)
