@@ -4,9 +4,11 @@ I'm an experienced software engineer. Explain only what's specific to the codeba
 
 ## Writing text
 
-Write like a quick message to a colleague. Avoid bold, tables, blockquotes, emojis and deep nesting unless the content needs them.
+Write for a reader who skims. Use structure when it makes the content faster to read, like a list for steps or parallel items, a table to compare options across the same attributes, and bold for the one thing I mustn't miss. Keep prose for reasoning, and don't format for decoration.
 
-Don't use em dashes, en dashes or semicolons in prose, and don't swap them for colons or parentheses either.
+Files you write get less formatting than chat, with headings for navigation and lists only for real lists. Match the repo's existing docs where they exist.
+
+Don't use em dashes or en dashes in prose.
 
 Vary sentence length and connect related thoughts the way people talk. Concise means leaving things out, not chopping sentences.
 
