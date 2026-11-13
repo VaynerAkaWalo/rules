@@ -64,18 +64,16 @@ const render = async (template: string | undefined, instructions: string) => {
   return `${text.replaceAll("{{instructions}}", instructions.trimEnd())}\n`
 }
 
-const manifest = ".rules-skills.json"
+const skillsInHistory = async () => {
+  const paths = await Bun.$`git -C ${root} log --format= --name-only -- skills`.text()
 
-const installedSkills = async (directory: string): Promise<string[]> => {
-  const path = join(directory, manifest)
-  if (!(await exists(path))) return []
-
-  return JSON.parse(await readFile(path, "utf8"))
+  return new Set(paths.split("\n").filter(Boolean).map((path) => path.split("/")[1]))
 }
 
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
   const skills = await readdir(join(root, "skills"))
+  const removed = [...(await skillsInHistory())].filter((skill) => !skills.includes(skill))
 
   for (const target of targets) {
     const directory = home(target)
@@ -87,12 +85,9 @@ const install = async (source: string) => {
     console.log(`${target.name}: ${await realpath(path)}`)
 
     const skillsDirectory = join(directory, "skills")
-    const stale = (await installedSkills(skillsDirectory)).filter((skill) => !skills.includes(skill))
 
-    for (const skill of stale) {
+    for (const skill of removed) {
       await rm(join(skillsDirectory, skill), { recursive: true, force: true })
-
-      console.log(`${target.name} ${skill}: removed`)
     }
 
     for (const skill of skills) {
@@ -102,8 +97,6 @@ const install = async (source: string) => {
 
       console.log(`${target.name} ${skill}: ${await realpath(destination)}`)
     }
-
-    await writeFile(join(skillsDirectory, manifest), `${JSON.stringify(skills, null, 2)}\n`)
   }
 }
 

@@ -63,21 +63,17 @@ test("installer deploys rules and skills and preserves the Codex override select
   )
 })
 
-test("installer removes skills it installed before that the repo no longer has and keeps skills from elsewhere", async () => {
+test("installer removes skills the repo used to have and keeps skills from elsewhere", async () => {
   const homes = await createHomes()
   const skills = join(homes.claude, "skills")
 
-  for (const skill of ["renamed-skill", "foreign-skill"]) {
+  for (const skill of ["skill-authoring", "foreign-skill"]) {
     await mkdir(join(skills, skill), { recursive: true })
     await writeFile(join(skills, skill, "SKILL.md"), skill)
   }
-  await writeFile(join(skills, ".rules-skills.json"), JSON.stringify(["renamed-skill", "bro"]))
 
   await runInstall(homes)
 
-  expect(await Bun.file(join(skills, "renamed-skill", "SKILL.md")).exists()).toBe(false)
+  expect(await Bun.file(join(skills, "skill-authoring", "SKILL.md")).exists()).toBe(false)
   expect(await Bun.file(join(skills, "foreign-skill", "SKILL.md")).exists()).toBe(true)
-
-  await runInstall(homes)
-  expect(await Bun.file(join(skills, "bro", "SKILL.md")).exists()).toBe(true)
 })
