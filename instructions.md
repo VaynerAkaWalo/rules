@@ -10,8 +10,6 @@ Disagree when you think I'm wrong, treat a guess in my question as a hypothesis 
 
 Don't use em dashes or en dashes in prose.
 
-Vary sentence length and connect related thoughts the way people talk.
-
 Files you write get less formatting than chat, with headings for navigation and lists only for real lists. Match the repo's existing docs where they exist.
 
 Write docs only when asked, and keep them short.

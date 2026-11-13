@@ -1,4 +1,4 @@
-import { access, cp, mkdir, readdir, readFile, realpath, writeFile } from "node:fs/promises"
+import { access, cp, mkdir, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
@@ -64,6 +64,15 @@ const render = async (template: string | undefined, instructions: string) => {
   return `${text.replaceAll("{{instructions}}", instructions.trimEnd())}\n`
 }
 
+const manifest = ".rules-skills.json"
+
+const installedSkills = async (directory: string): Promise<string[]> => {
+  const path = join(directory, manifest)
+  if (!(await exists(path))) return []
+
+  return JSON.parse(await readFile(path, "utf8"))
+}
+
 const install = async (source: string) => {
   const instructions = await readFile(source, "utf8")
   const skills = await readdir(join(root, "skills"))
@@ -77,12 +86,24 @@ const install = async (source: string) => {
 
     console.log(`${target.name}: ${await realpath(path)}`)
 
+    const skillsDirectory = join(directory, "skills")
+    const stale = (await installedSkills(skillsDirectory)).filter((skill) => !skills.includes(skill))
+
+    for (const skill of stale) {
+      await rm(join(skillsDirectory, skill), { recursive: true, force: true })
+
+      console.log(`${target.name} ${skill}: removed`)
+    }
+
     for (const skill of skills) {
-      const destination = join(directory, "skills", skill)
+      const destination = join(skillsDirectory, skill)
+      await rm(destination, { recursive: true, force: true })
       await cp(join(root, "skills", skill), destination, { recursive: true })
 
       console.log(`${target.name} ${skill}: ${await realpath(destination)}`)
     }
+
+    await writeFile(join(skillsDirectory, manifest), `${JSON.stringify(skills, null, 2)}\n`)
   }
 }
 
